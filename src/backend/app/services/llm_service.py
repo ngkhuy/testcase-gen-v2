@@ -19,7 +19,7 @@ class LLMService:
             top_p=0.5,
             num_ctx=8192,
             format=TestCaseList.model_json_schema(),
-            keep_alive=60 # seconds
+            keep_alive="5m" # 5 phút
         )
         self.parser = JsonOutputParser()
         
