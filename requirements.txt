@@ -2,3 +2,4 @@ dotenv==0.9.9
 landingai-ade==1.6.0
 beautifulsoup4==4.14.3
 pydantic-settings==2.13.1
+langchain-ollama==1.0.1
