@@ -3,7 +3,7 @@
 
 import os
 from dotenv import load_dotenv
-from landingai_ade import LandingAIADE
+from landingai_ade import AsyncLandingAIADE
 from pathlib import Path
 from landingai_ade.types import ParseResponse
 from schemas.page_content import page_content_schema
@@ -13,7 +13,7 @@ load_dotenv()
 class ADEExtraction:
     def __init__(self):
         self.api_key = os.getenv("LANDING_AI_API_KEY") if os.getenv("LANDING_AI_API_KEY") else None
-        self.client = LandingAIADE(apikey=self.api_key)
+        self.client = AsyncLandingAIADE(apikey=self.api_key)
         
     def parse_document(self, document_path: str):
         
