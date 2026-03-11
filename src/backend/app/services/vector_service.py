@@ -53,10 +53,10 @@ class VectorService:
             # 2. Xóa thư mục lưu trữ trên ổ cứng
             if os.path.exists(self.index_path):
                 shutil.rmtree(self.index_path)
-                logger.info(f"💥 Đã xóa sạch toàn bộ dữ liệu tại {self.index_path}")
+                logger.info(f"Đã xóa sạch toàn bộ dữ liệu tại {self.index_path}")
             return True
         except Exception as e:
-            logger.error(f"❌ Lỗi khi clear index: {str(e)}")
+            logger.error(f"Lỗi khi clear index: {str(e)}")
             return False
 
     def delete_by_source(self, source_name: str):
