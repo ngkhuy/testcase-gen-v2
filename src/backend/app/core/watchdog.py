@@ -75,5 +75,5 @@ class DocWatchdog:
                 time.sleep(1)
         except KeyboardInterrupt:
             self.observer.stop()
-            logger.info("🛑 Watchdog đã dừng.")
+            logger.info("Watchdog đã dừng.")
         self.observer.join()
