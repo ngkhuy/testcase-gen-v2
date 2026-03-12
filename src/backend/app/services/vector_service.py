@@ -1,84 +1,131 @@
+import os
+import shutil
+import logging
+from uuid import uuid4
+from langchain_classic.vectorstores import FAISS
+from langchain_core.documents import Document
+from embedding_service import EmbeddingService
+
+logger = logging.getLogger(__name__)
+
 class VectorService:
     def __init__(self, embedding_service: EmbeddingService):
         self.embed_model = embedding_service.get_model()
         self.index_path = "storage/faiss_index"
         self.vector_db = self.load_vector_db()
-
-    def create_vector_db(self, chunks: list):
-        try:
-            logger.info(f"Tạo vector DB với {len(chunks)} chunks")
-            vector_db = FAISS.from_documents(chunks, self.embed_model)
-            return vector_db
-        except Exception as e:
-            logger.error(f"Lỗi khi tạo Vector DB: {str(e)}")
-            return None
-
-    def save_vector_db(self, vector_db):
-        if not os.path.exists(self.index_path):
-            os.makedirs(self.index_path, exist_ok=True)
-
-        vector_db.save_local(str(self.index_path))
-        logger.info(f"Lưu index tại {self.index_path}")
-        self.vector_db = vector_db
-
-    def load_vector_db(self):
-        """Load FAISS index từ ổ cứng lên RAM để tìm kiếm"""
-        try:
-            if os.path.exists(os.path.join(self.index_path, "index.faiss")):
-                return FAISS.load_local(
-                    str(self.index_path), 
-                    self.embed_model,
-                    allow_dangerous_deserialization=True # Cần thiết cho FAISS
-                )
-            logger.warning("Không tìm thấy file FAISS index để load.")
-            return None
-        except Exception as e:
-            logger.error(f"Lỗi khi load Vector DB: {str(e)}")
-            return None
-
-    def search(self, query: str, k: int = 4):
-        """Tìm kiếm các đoạn văn bản liên quan nhất"""
-        if self.vector_db:
-            return self.vector_db.similarity_search(query, k=k)
-        return []
-    
-    def clear_all_data(self):
+        
+    def create_vector_db(self, documents: list[Document]):
         """
-        Xóa sổ toàn bộ index: cả trên RAM lẫn ổ cứng (Flush)
+        Tạo mới vector database 
         """
         try:
-            # 1. Reset biến trên RAM
-            self.vector_db = None
+            logger.info(f"Tạo vector database mới với {len(documents)} tài liệu")
             
-            # 2. Xóa thư mục lưu trữ trên ổ cứng
-            if os.path.exists(self.index_path):
-                shutil.rmtree(self.index_path)
-                logger.info(f"Đã xóa sạch toàn bộ dữ liệu tại {self.index_path}")
+            uuids = [str(uuid4()) for _ in documents]
+            self.vector_db = FAISS.from_documents(
+                documents=documents,
+                embedding=self.embed_model,
+                ids=uuids
+            )
+            
+            # lưu vào persist storage
+            self.save_vector_db()
+            
+            return self.vector_db
+        except Exception as e:
+            logger.error(f"Lỗi khi tao vector database: {e}")
+            return None
+        
+    def add_documents(self, documents: list[Document]):
+        """
+        Thêm tài liệu vào vector database hiện tại
+        """
+        try:
+            if self.vector_db is None:
+                return self.create_vector_db(documents=documents)
+            
+            logger.info(f"Thêm {len(documents)} tài liệu vào vector database hiện tại")
+            uuids = [str(uuid4()) for _ in range(len(documents))]
+            
+            self.vector_db.add_documents(documents=documents, ids=uuids)
+            self.save_vector_db()
             return True
         except Exception as e:
-            logger.error(f"Lỗi khi clear index: {str(e)}")
+            logger.error(f"Lỗi khi thêm tài liệu vào vector database: {e}")
             return False
-
-    def delete_by_source(self, source_name: str):
-        if not self.vector_db:
-            logger.warning("Không có index để xóa.")
-            return False
-
+        
+    def save_vector_db(self):
         try:
-            dict_index = self.vector_db.docstore._dict
-            ids_to_delete = [
-                obj_id for obj_id, doc in dict_index.items() 
-                if doc.metadata.get("source") == source_name
-            ]
+            if self.vector_db:
+                if not os.path.exists(self.index_path):
+                    os.makedirs(self.index_path, exist_ok=True)
 
-            if ids_to_delete:
-                self.vector_db.delete(ids_to_delete)
-                self.save_vector_db(self.vector_db) # Lưu lại sau khi xóa
-                logger.info(f"Đã xóa {len(ids_to_delete)} chunks từ nguồn: {source_name}")
-                return True
-            else:
-                logger.warning(f"Không tìm thấy dữ liệu nào từ nguồn: {source_name}")
-                return False
+                self.vector_db.save_local(self.index_path)
+                logger.info(f"Vector database đã được lưu tại {self.index_path}")
         except Exception as e:
-            logger.error(f"Lỗi khi xóa vector theo source: {str(e)}")
+            logger.error(f"Lỗi khi lưu vector database: {e}")
+            
+    def load_vector_db(self):
+        try:
+            faiss_file = os.path.join(self.index_path, "index.faiss")
+            if os.path.exists(faiss_file):
+                logger.info(f"Tải vector database từ {faiss_file}")
+                return FAISS.load_local(
+                    folder_path=self.index_path,
+                    embeddings=self.embed_model,
+                    allow_dangerous_deserialization=True
+                )
+            logger.info("Không tìm thấy vector database, sẽ tạo mới khi cần thiết")
+            return None
+        except Exception as e:
+            logger.error(f"Lỗi khi tải vector database: {e}")
+            return None
+        
+    def delete_by_source(self, source: str):
+        """
+        Xóa tài liệu khỏi vector database dựa trên nguồn
+        Sử dụng khi file bị trùng tên
+        """
+        if not self.vector_db:
+            logger.warning("Không có vector database để xóa tài liệu")
             return False
+        
+        try:
+            doc_dict = self.vector_db.docstore.__dict__
+            ids_to_delete = [
+                obj_id for obj_id, doc in doc_dict.items()
+                if doc.metadata.get("source") == source
+            ]
+            
+            if ids_to_delete:
+                self.vector_db.delete(ids=ids_to_delete)
+                self.save_vector_db()
+                logger.info(f"Đã xóa {len(ids_to_delete)} tài liệu có nguồn '{source}' khỏi vector database")
+                return True
+        except Exception as e:
+            logger.error(f"Lỗi khi xóa tài liệu theo nguồn '{source}': {e}")
+            return False
+        
+    def clear_all(self):
+        try:
+            self.vector_db = None
+            if os.path.exists(self.index_path):
+                shutil.rmtree(self.index_path)
+                logger.info(f"Đã xóa toàn bộ vector database tại {self.index_path}")
+                return True
+        except Exception as e:
+            logger.error(f"Lỗi khi xóa toàn bộ vector database: {e}")
+            return False
+        
+    def search(self, query: str, top_k: int = 5):
+        if not self.vector_db:
+            logger.warning("Không có vector database để tìm kiếm")
+            return []
+        
+        try:
+            results = self.vector_db.similarity_search(query=query, k=top_k)
+            logger.info(f"Tìm kiếm với query '{query}' trả về {len(results)} kết quả")
+            return results
+        except Exception as e:
+            logger.error(f"Lỗi khi tìm kiếm trong vector database: {e}")
+            return []

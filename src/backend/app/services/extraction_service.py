@@ -12,6 +12,7 @@ class ADEExtraction:
     def __init__(self):
         self.api_key = settings.LANDING_AI_API_KEY
         self.client = AsyncLandingAIADE(apikey=self.api_key)
+        self.page_content_schema = page_content_schema
         
     def parse_document(self, document_path: str):
         
@@ -30,7 +31,7 @@ class ADEExtraction:
     
     def extract_content(self, markdown: str):
         extract_result: ParseResponse = self.client.extract(
-            schema=doc_type_schema,
+            schema=self.page_content_schema,
             markdown=markdown
         )
         return extract_result.extraction['content']
