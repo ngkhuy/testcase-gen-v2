@@ -7,3 +7,4 @@ langchain-classic==1.0.2
 langchain-community==0.4.1
 faiss-cpu==1.13.2
 watchdog==6.0.0
+FlashRank==0.2.10
