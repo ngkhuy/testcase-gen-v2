@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = "qwen3.5:4b"
     OLLAMA_EMBEDDING_MODEL: str = "qwen3-embedding:0.6b"
     FAISS_INDEX_PATH: str = "storage/faiss_index"
+    SPEC_DIR: str = "storage/specs"
+    RAW_DOC_DIR: str = "raw_doc"
 
     class Config:
         env_file = ".env"
