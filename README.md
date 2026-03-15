@@ -45,7 +45,6 @@ testcase-gen-v2/
 ├── storage/                 # Lưu trữ dữ liệu (Specs, Vector DB, Logs)
 ├── raw_doc/                 # Thư mục chứa tài liệu đầu vào
 ├── requirements.txt         # Danh sách thư viện cần thiết
-└── extraction.ipynb         # Notebook thử nghiệm quy trình trích xuất
 ```
 
 ---
