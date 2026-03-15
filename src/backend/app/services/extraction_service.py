@@ -14,7 +14,7 @@ class ADEExtraction:
         self.client = AsyncLandingAIADE(apikey=self.api_key)
         self.page_content_schema = page_content_schema
         
-    def parse_document(self, document_path: str):
+    async def parse_document(self, document_path: str):
         
         # check if document exist
         if not os.path.exists(document_path):
@@ -27,11 +27,11 @@ class ADEExtraction:
             split="page"
         )
 
-        return parse_result
+        return await parse_result
     
-    def extract_content(self, markdown: str):
+    async def extract_content(self, markdown: str):
         extract_result: ParseResponse = self.client.extract(
             schema=self.page_content_schema,
             markdown=markdown
         )
-        return extract_result.extraction['content']
+        return await extract_result
