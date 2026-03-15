@@ -1,99 +1,81 @@
-# Testcase Generator V2
+# Testcase Generator
 
-Hệ thống tự động hóa quá trình soạn thảo Technical Specification và tạo Test Cases dựa trên tài liệu yêu cầu (Requirements) sử dụng sức mạnh của AI và RAG (Retrieval-Augmented Generation).
-
----
-
-## Kiến trúc hệ thống
-
-Dự án được xây dựng theo mô hình **Event-driven** kết hợp với **RAG Pipeline**:
-
-1.  **Watchdog (Observer)**: Giám sát thư mục `raw_doc`. Khi có file mới (`.pdf`, `.md`, `.txt`), quy trình xử lý sẽ tự động kích hoạt.
-2.  **Extraction Service (LandingAI ADE)**: Trích xuất nội dung từ các file phức tạp (đặc biệt là PDF có bảng biểu) sang định dạng Markdown chuẩn.
-3.  **Spec Generation Service (Ollama LLM)**: Sử dụng các mô hình ngôn ngữ lớn (như Qwen 3.5) để chuyển đổi nội dung thô thành bản **Technical Specification** chuyên nghiệp (Actors, Functional Requirements, Business Rules).
-4.  **Vector Storage (FAISS)**: Chẻ nhỏ (chunking) bản Spec và lưu trữ vào Vector Database để phục vụ truy vấn tìm kiếm ngữ cảnh.
-5.  **RAG / Testcase Generation**: Cung cấp khả năng truy vấn thông minh và tạo danh sách các Test Cases chi tiết từ bản Spec đã được chuẩn hóa.
+An automated system for drafting Technical Specifications and generating Test Cases from requirement documents using the power of AI and RAG (Retrieval-Augmented Generation).
 
 ---
 
-## Công nghệ sử dụng
+## System Architecture
 
-*   **Ngôn ngữ**: Python 3.10+
-*   **AI Framework**: LangChain (Classic & Core)
-*   **LLM & Embeddings**: [Ollama](https://ollama.com/) (Qwen 3.5, embedding models)
-*   **Document Parsing**: [LandingAI ADE](https://landing.ai/)
-*   **Vector Database**: FAISS (CPU version)
-*   **File Monitoring**: Watchdog
-*   **Validation**: Pydantic v2
+The project is built on an event-driven architecture integrated with a RAG pipeline:
 
----
-
-## Cấu trúc dự án
-
-```text
-testcase-gen-v2/
-├── src/
-│   ├── backend/             # Source code backend (Python)
-│   │   ├── app/
-│   │   │   ├── api/         # Route handlers (FastAPI - upcoming)
-│   │   │   ├── core/        # Cấu hình hệ thống, Watchdog logic
-│   │   │   ├── schemas/     # Pydantic models (Data validation)
-│   │   │   ├── services/    # Logic nghiệp vụ (LLM, Vector, ADE...)
-│   │   │   └── utils/       # Prompt templates, helpers
-│   │   └── main.py          # Entry point - Bộ não điều khiển
-│   └── frontend/            # Giao diện người dùng (upcoming)
-├── storage/                 # Lưu trữ dữ liệu (Specs, Vector DB, Logs)
-├── raw_doc/                 # Thư mục chứa tài liệu đầu vào
-├── requirements.txt         # Danh sách thư viện cần thiết
-```
+1. Document Watchdog: Monitors the `storage/raw_docs` directory. Processing is automatically triggered when new files (.pdf, .md, .txt) are detected.
+2. Extraction Service: Powered by LandingAI ADE to extract content from complex documents (especially PDFs with tables) into standardized Markdown.
+3. Spec Generation Service: Utilizes Ollama LLMs to transform raw content into professional Technical Specifications (Actors, Functional Requirements, Business Rules).
+4. Vector Storage: Uses FAISS to store document chunks, enabling efficient semantic search and context retrieval.
+5. Hybrid Search: Combines FAISS vector search with SQLite FTS5 (Full-Text Search) for highly accurate document retrieval.
+6. Test Case Generation: Provides an interactive AI chat interface to generate detailed Test Cases based on standardized specs.
+7. Excel Export: Automatically exports generated Test Case lists into formatted .xlsx files.
 
 ---
 
-## Cài đặt & Sử dụng
+## Tech Stack
 
-### 1. Yêu cầu hệ thống
-- Đã cài đặt [Ollama](https://ollama.com/) và tải model:
+* Programming Language: Python 3.10+
+* AI Framework: LangChain (Classic & Core)
+* LLM & Embeddings: Ollama (Qwen series, mxbai-embed-large)
+* Document Parsing: LandingAI ADE
+* Vector Database: FAISS (CPU version)
+* Full-Text Search: SQLite FTS5
+* File Monitoring: Watchdog
+* Excel Export: openpyxl
+* Data Validation: Pydantic v2
+
+---
+
+## Installation & Usage
+
+### 1. Prerequisites
+- Install Ollama (https://ollama.com/)
+- Pull required models (examples):
   ```bash
-  ollama pull qwen3.5:4b
-  ollama pull qwen3-embedding:0.6b
+  ollama pull qwen2.5:latest
+  ollama pull mxbai-embed-large
   ```
 
-### 2. Cấu hình môi trường
-Tạo file `.env` trong thư mục `src/backend/` dựa trên mẫu `.env.sample`:
+### 2. Environment Configuration
+Create a `.env` file in the `src/backend/` directory or root as per your config:
 ```env
 LANDING_AI_API_KEY=your_api_key_here
-OLLAMA_BASE_URL=http://localhost:11434/v1
-OLLAMA_MODEL=qwen3.5:4b
-OLLAMA_EMBEDDING_MODEL=qwen3-embedding:0.6b
+OLLAMA_MODEL=qwen2.5:latest
+OLLAMA_EMBEDDING_MODEL=mxbai-embed-large
 ```
 
-### 3. Cài đặt thư viện
+### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Khởi chạy Backend
+### 4. Run the Backend
 ```bash
 cd src/backend
 python main.py
 ```
 
-### 5. Sử dụng
-- Copy file yêu cầu (`.pdf`, `.md`, `.txt`) vào thư mục `src/backend/raw_doc/`.
-- Theo dõi Terminal để xem AI trích xuất và soạn thảo Spec.
-- Bản Spec hoàn thiện sẽ được lưu tại `src/backend/storage/specs/`.
+### 5. Workflow
+- Place your requirement files (.pdf, .md, .txt) into `storage/raw_docs/`.
+- Watch the terminal logs as the system parses the document and drafts the Technical Spec.
+- Interact with the AI via terminal chat to ask questions or request Test Case generation.
+- Generated Test Cases are automatically exported to `.xlsx` files in the backend directory.
 
 ---
 
-## Lộ trình phát triển (Roadmap)
-- [x] Thiết lập Project Structure & Package.
-- [x] Tích hợp LandingAI ADE & Ollama.
-- [x] Triển khai Watchdog tự động hóa pipeline.
-- [ ] Xây dựng REST API bằng FastAPI.
-- [ ] Phát triển Giao diện người dùng (Frontend).
-- [ ] Tích hợp cơ chế Feedback vòng lặp cho LLM.
+## Roadmap
 
----
-Any issues cause in running this project, please open an issue.
+- [x] Project Structure & Package initialization.
+- [x] LandingAI ADE & Ollama integration.
+- [x] Automated pipeline with Watchdog monitoring.
+- [x] Hybrid Search (FAISS + SQLite FTS5).
+- [x] Excel Export functionality.
+- [ ] REST API development with FastAPI.
+- [ ] Web-based User Interface (Frontend).
 
-*Phát triển bởi @ngkhuy.*
