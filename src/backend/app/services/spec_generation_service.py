@@ -1,5 +1,5 @@
 from .llm_service import LLMService
-from ..utils.prompt_template import create_spec_genration_prompt, get_system_prompt
+from ..utils.prompt_template import create_spec_generation_prompt, get_system_prompt
 from langchain_core.messages import SystemMessage, HumanMessage
 import os
 import logging
@@ -14,15 +14,16 @@ class SpecGeneratorService:
 
     def generate_detailed_spec(self, raw_markdown: str, file_name: str):
         sys_prompt = get_system_prompt(role="ba")
-        user_prompt = create_spec_generation_prompt(raw_markdown)
+        user_prompt_template = create_spec_generation_prompt()
 
-        messages = [
-            SystemMessage(content=sys_prompt),
-            HumanMessage(content=user_prompt)
-        ]
+        from langchain_core.prompts import ChatPromptTemplate
+        chat_template = ChatPromptTemplate.from_messages([
+            ("system", sys_prompt),
+            ("human", user_prompt_template)
+        ])
 
         logger.info(f"LLM đang soạn thảo Spec cho {file_name}...")
-        response = self.llm.invoke(messages)
+        response = self.llm.invoke(chat_template.format_messages(raw_markdown=raw_markdown))
         
         spec_file_name = f"spec_{file_name.replace('.pdf', '').replace('.md', '')}.md"
         spec_path = os.path.join(self.spec_dir, spec_file_name)

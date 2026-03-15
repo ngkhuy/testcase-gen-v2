@@ -2,16 +2,18 @@ import os
 import shutil
 import logging
 from uuid import uuid4
-from langchain_classic.vectorstores import FAISS
+from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from .embedding_service import EmbeddingService
+
+from ..core.config import settings
 
 logger = logging.getLogger(__name__)
 
 class VectorService:
     def __init__(self, embedding_service: EmbeddingService):
         self.embed_model = embedding_service.get_model()
-        self.index_path = "storage/faiss_index"
+        self.index_path = settings.FAISS_INDEX_PATH
         self.vector_db = self.load_vector_db()
         
     def create_vector_db(self, documents: list[Document]):
@@ -91,17 +93,20 @@ class VectorService:
             return False
         
         try:
-            doc_dict = self.vector_db.docstore.__dict__
-            ids_to_delete = [
-                obj_id for obj_id, doc in doc_dict.items()
-                if doc.metadata.get("source") == source
-            ]
+            # Truy cập danh sách IDs từ docstore
+            ids_to_delete = []
+            for obj_id, doc in self.vector_db.docstore._dict.items():
+                # Xử lý trường hợp doc là đối tượng Document hoặc là dict
+                doc_metadata = getattr(doc, 'metadata', {}) if not isinstance(doc, dict) else doc.get('metadata', {})
+                if doc_metadata.get("source") == source:
+                    ids_to_delete.append(obj_id)
             
             if ids_to_delete:
                 self.vector_db.delete(ids=ids_to_delete)
                 self.save_vector_db()
                 logger.info(f"Đã xóa {len(ids_to_delete)} tài liệu có nguồn '{source}' khỏi vector database")
                 return True
+            return False
         except Exception as e:
             logger.error(f"Lỗi khi xóa tài liệu theo nguồn '{source}': {e}")
             return False
@@ -128,4 +133,32 @@ class VectorService:
             return results
         except Exception as e:
             logger.error(f"Lỗi khi tìm kiếm trong vector database: {e}")
+            return []
+        
+    def chunk_document(self, document: Document, chunk_size: int = 1000, chunk_overlap: int = 200):
+        """
+        Chia nhỏ một tài liệu thành các đoạn
+        """
+        try:
+            text = document.page_content
+            metadata = document.metadata
+            
+            chunks = []
+            start = 0
+            while start < len(text):
+                end = min(start + chunk_size, len(text))
+                chunk_text = text[start:end]
+                
+                # Thêm metadata nguồn gốc nếu có
+                chunk_metadata = metadata.copy() if metadata else {}
+                chunk_metadata["source"] = metadata.get("source", "unknown") if metadata else "unknown"
+                
+                chunks.append(Document(page_content=chunk_text, metadata=chunk_metadata))
+                
+                start += chunk_size - chunk_overlap
+            
+            logger.info(f"Đã chia tài liệu thành {len(chunks)} đoạn với kích thước {chunk_size} và overlap {chunk_overlap}")
+            return chunks
+        except Exception as e:
+            logger.error(f"Lỗi khi chia nhỏ tài liệu: {e}")
             return []

@@ -5,8 +5,8 @@ def get_system_prompt(role: str = "ba") -> str:
     }
     return prompts.get(role, prompts["ba"])
 
-def create_spec_generation_prompt(raw_markdown: str) -> str:
-    return f"""
+def create_spec_generation_prompt() -> str:
+    return """
     Dựa trên nội dung Markdown từ tài liệu yêu cầu (Requirement) dưới đây, hãy soạn thảo một bản Technical Specification chuẩn.
     
     Yêu cầu:
@@ -18,10 +18,13 @@ def create_spec_generation_prompt(raw_markdown: str) -> str:
     {raw_markdown}
     """
 
-def create_rag_query_prompt(human_query: str, context: str) -> str:
-    return f"""
-    Bạn là một trợ lý AI thông minh. Sử dụng thông tin từ ngữ cảnh (Context) được cung cấp dưới đây để trả lời câu hỏi của người dùng. 
-    Nếu thông tin không có trong Context, hãy thành thật trả lời là bạn không biết, đừng tự ý bịa đặt.
+def create_rag_query_prompt() -> str:
+    return """
+    Sử dụng thông tin từ ngữ cảnh (Context) dưới đây để hỗ trợ người dùng. 
+    
+    BẮT BUỘC:
+    1. Câu trả lời PHẢI là một JSON object hợp lệ.
+    2. Nếu không có thông tin, hãy trả về mảng test_cases rỗng [] trong JSON.
 
     CONTEXT:
     {context}

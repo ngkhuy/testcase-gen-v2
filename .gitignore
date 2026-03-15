@@ -3,3 +3,5 @@ storage/
 *.ipynb
 models/
 .vscode/
+__pycache__
+*.pdf
