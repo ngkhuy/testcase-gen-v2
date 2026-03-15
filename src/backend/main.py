@@ -88,7 +88,6 @@ async def main():
 
         async def handle_query(query: str):
             try:
-                # 1. Tìm kiếm tài liệu
                 logger.info("Đang tìm kiếm tài liệu cho query...")
                 retrieved_docs = await retriever.search(query)
 
@@ -96,7 +95,6 @@ async def main():
                     print("Brain: Xin lỗi, tôi không tìm thấy thông tin liên quan trong database.")
                     return
 
-                # 2. Tạo ngữ cảnh
                 context = "\n---\n".join([doc.page_content for doc in retrieved_docs])
                 sys_prompt = get_system_prompt(role="tester")
                 human_template = create_rag_query_prompt()
@@ -106,7 +104,6 @@ async def main():
                     ("human", human_template)
                 ])
                 
-                # 3. Tạo câu trả lời
                 logger.info("Đang tạo câu trả lời...")
                 response = query_llm_service.generate(chat_template, {
                     "context": context,
@@ -117,7 +114,6 @@ async def main():
             except Exception as e:
                 logger.error(f"Lỗi khi xử lý câu hỏi: {e}")
 
-        # Vòng lặp Chat (Sử dụng threaded input để không chặn log)
         while True:
             try:
                 query = await asyncio.to_thread(input, "\nBạn: ")
