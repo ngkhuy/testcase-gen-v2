@@ -1,4 +1,4 @@
-# Testcase Generator V2 🚀
+# Testcase Generator V2
 
 Hệ thống tự động hóa quá trình soạn thảo Technical Specification và tạo Test Cases dựa trên tài liệu yêu cầu (Requirements) sử dụng sức mạnh của AI và RAG (Retrieval-Augmented Generation).
 
