@@ -1,8 +1,11 @@
-from llm_service import LLMService
-from utils.prompt_template import create_spec_genration_prompt, get_system_prompt
+from .llm_service import LLMService
+from ..utils.prompt_template import create_spec_genration_prompt, get_system_prompt
 from langchain_core.messages import SystemMessage, HumanMessage
 import os
-from core.config import settings
+import logging
+from ..core.config import settings
+
+logger = logging.getLogger(__name__)
 
 class SpecGeneratorService:
     def __init__(self, llm_service: LLMService):

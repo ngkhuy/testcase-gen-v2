@@ -4,7 +4,7 @@ import logging
 from uuid import uuid4
 from langchain_classic.vectorstores import FAISS
 from langchain_core.documents import Document
-from embedding_service import EmbeddingService
+from .embedding_service import EmbeddingService
 
 logger = logging.getLogger(__name__)
 

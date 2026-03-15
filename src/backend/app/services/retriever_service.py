@@ -3,7 +3,7 @@ from langchain_classic.retrievers.multi_query import MultiQueryRetriever
 from langchain_classic.retrievers import BM25Retriever
 from langchain_classic.retrievers.document_compressors import FlashrankRerank
 import logging
-from core.config import settings
+from ..core.config import settings
 from flashrank import Ranker
 
 logger = logging.getLogger(__name__)

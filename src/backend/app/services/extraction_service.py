@@ -5,8 +5,8 @@ import os
 from landingai_ade import AsyncLandingAIADE
 from pathlib import Path
 from landingai_ade.types import ParseResponse
-from schemas.page_content import page_content_schema
-from core.config import settings
+from ..schemas.page_content import page_content_schema
+from ..core.config import settings
 
 class ADEExtraction:
     def __init__(self):

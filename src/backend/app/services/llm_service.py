@@ -1,8 +1,8 @@
 from langchain_ollama import ChatOllama
 from langchain_core.output_parsers import JsonOutputParser
 import logging
-from schemas.testcase_model import TestCaseList
-from core.config import settings
+from ..schemas.testcase_model import TestCaseList
+from ..core.config import settings
 
 logger = logging.getLogger(__name__)
 

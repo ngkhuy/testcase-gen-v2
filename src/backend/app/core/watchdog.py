@@ -3,8 +3,8 @@ import os
 import logging
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from services.vector_service import VectorService
-from services.spec_generator_service import SpecGeneratorService
+from ..services.vector_service import VectorService
+from ..services.spec_generation_service import SpecGeneratorService
 
 logger = logging.getLogger(__name__)
 

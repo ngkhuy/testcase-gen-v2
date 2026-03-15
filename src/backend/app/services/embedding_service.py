@@ -1,5 +1,5 @@
 import logging
-from core.config import settings
+from ..core.config import settings
 from langchain_ollama import OllamaEmbeddings
 
 logger = logging.getLogger(__name__)
