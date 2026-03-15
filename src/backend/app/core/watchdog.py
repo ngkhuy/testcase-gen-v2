@@ -5,6 +5,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from ..services.vector_service import VectorService
 from ..services.spec_generation_service import SpecGeneratorService
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ class DocWatchdog:
     def __init__(self, vector_service, spec_service, extraction_service):
         self.observer = Observer()
         self.handler = DocHandler(vector_service, spec_service, extraction_service)
-        self.watch_dir = "raw_doc"
+        self.watch_dir = settings.RAW_DOC_DIR
 
     def start(self):
         if not os.path.exists(self.watch_dir):
