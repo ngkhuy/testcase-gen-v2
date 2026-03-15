@@ -10,7 +10,6 @@ class EmbeddingService:
             self.embeddings = OllamaEmbeddings(
                 model=settings.OLLAMA_EMBEDDING_MODEL,
                 validate_model_on_init=True,
-                num_gpu=1
             )
         except Exception as e:
             logger.error(f"Lỗi khởi tạo Ollama Embeddings: {str(e)}")
