@@ -26,7 +26,7 @@ class AdvancedRetriever:
         self.compressor = FlashrankRerank(client=self.flashrank_client, top_n=5)
         
     async def _get_expanded_queries(self, query: str) -> list[str]:
-        """Sử dụng LLM để mở rộng câu hỏi (giống MultiQueryRetriever)"""
+        """Sử dụng LLM để mở rộng câu hỏi"""
         try:
             from langchain_core.prompts import PromptTemplate
             prompt = PromptTemplate.from_template(
@@ -44,12 +44,6 @@ class AdvancedRetriever:
             return [query]
 
     async def search(self, query: str, k: int = 5):
-        """
-        Hàm thực thi Hybrid Search gắn chặt với Database:
-        1. Tìm kiếm theo Ý nghĩa (FAISS Vector)
-        2. Tìm kiếm theo Từ khóa (SQLite FTS5)
-        3. Kết hợp và Rerank (Flashrank)
-        """
         search_k = k * 4
         
         queries = await self._get_expanded_queries(query)
