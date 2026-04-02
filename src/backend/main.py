@@ -2,6 +2,9 @@ import os
 import sys
 import logging
 import asyncio
+import datetime
+from openpyxl import Workbook
+from openpyxl.styles import Font
 
 # Thêm đường dẫn hiện tại vào sys.path để tránh lỗi import khi chạy từ thư mục gốc
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -33,6 +36,61 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger("BrainMain")
+
+def export_to_excel(data, base_filename="testcases"):
+    """Lưu danh sách test cases vào file Excel"""
+    try:
+        # Kiểm tra nếu data là dictionary và có key test_cases
+        if not isinstance(data, dict) or "test_cases" not in data:
+            return None
+            
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{base_filename}_{timestamp}.xlsx"
+        filepath = os.path.join(current_dir, filename)
+        
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Test Cases"
+        
+        # Headers
+        headers = ["ID", "Title", "Pre-condition", "Steps", "Data", "Expected Result", "Note"]
+        ws.append(headers)
+        
+        # Style headers
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
+            
+        # Data
+        for tc in data["test_cases"]:
+            # Linh hoạt lấy dữ liệu theo nhiều key khác nhau đề phòng LLM output sai key
+            ws.append([
+                tc.get("tc_id") or tc.get("id") or tc.get("tc_no") or "",
+                tc.get("tc_title") or tc.get("title") or tc.get("test_case_name") or "",
+                tc.get("pre_condition") or tc.get("preconditions") or tc.get("precondition") or "",
+                tc.get("test_step") or tc.get("test_steps") or tc.get("steps") or "",
+                tc.get("test_data") or tc.get("data") or "",
+                tc.get("expected_result") or tc.get("expected_results") or tc.get("expect") or "",
+                tc.get("note") or tc.get("description") or tc.get("priority") or ""
+            ])
+            
+        # Tự động chỉnh độ rộng cột (cơ bản)
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            ws.column_dimensions[column_letter].width = min(adjusted_width, 50)
+            
+        wb.save(filepath)
+        return filename
+    except Exception as e:
+        logger.error(f"Lỗi khi xuất file Excel: {e}")
+        return None
 
 def init_env():
     """Khởi tạo cấu trúc dự án"""
@@ -85,9 +143,9 @@ async def main():
         logger.info("Chào mừng đến với AI chat sinh testcase")
         logger.info("Nhấn Ctrl+C để thoát")
 
-
         async def handle_query(query: str):
             try:
+                # 1. Tìm kiếm tài liệu
                 logger.info("Đang tìm kiếm tài liệu cho query...")
                 retrieved_docs = await retriever.search(query)
 
@@ -95,6 +153,7 @@ async def main():
                     print("Brain: Xin lỗi, tôi không tìm thấy thông tin liên quan trong database.")
                     return
 
+                # 2. Tạo ngữ cảnh
                 context = "\n---\n".join([doc.page_content for doc in retrieved_docs])
                 sys_prompt = get_system_prompt(role="tester")
                 human_template = create_rag_query_prompt()
@@ -104,6 +163,7 @@ async def main():
                     ("human", human_template)
                 ])
                 
+                # 3. Tạo câu trả lời
                 logger.info("Đang tạo câu trả lời...")
                 response = query_llm_service.generate(chat_template, {
                     "context": context,
@@ -111,9 +171,17 @@ async def main():
                 })
                 
                 print(f"\nBrain: {response}")
+                
+                # 4. Xuất file Excel nếu là JSON hợp lệ
+                if isinstance(response, dict) and "test_cases" in response:
+                    excel_file = export_to_excel(response)
+                    if excel_file:
+                        print(f"==> Đã xuất danh sách test cases ra file: {excel_file}")
+
             except Exception as e:
                 logger.error(f"Lỗi khi xử lý câu hỏi: {e}")
 
+        # Vòng lặp Chat (Sử dụng threaded input để không chặn log)
         while True:
             try:
                 query = await asyncio.to_thread(input, "\nBạn: ")
