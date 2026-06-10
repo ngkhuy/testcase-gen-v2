@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Testcase Generator V2</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(22, 31, 48, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --primary: #8b5cf6;
+            --primary-hover: #7c3aed;
+            --primary-glow: rgba(139, 92, 246, 0.15);
+            --accent: #06b6d4;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.08) 0px, transparent 50%);
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo i {
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: linear-gradient(to right, #ffffff, #d1d5db);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .state-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        .state-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--text-muted);
+            box-shadow: 0 0 8px var(--text-muted);
+        }
+
+        .state-dot.active {
+            background-color: var(--success);
+            box-shadow: 0 0 10px var(--success);
+            animation: pulse 1.5s infinite;
+        }
+
+        .state-dot.drafting {
+            background-color: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        .state-dot.confirming {
+            background-color: var(--warning);
+            box-shadow: 0 0 10px var(--warning);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .settings-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+        }
+
+        .settings-btn:hover {
+            color: white;
+            transform: rotate(45deg);
+        }
+
+        /* App Layout */
+        .app-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 65px);
+            overflow: hidden;
+        }
+
+        /* Sidebar - Doc Management */
+        .sidebar {
+            width: 320px;
+            background: rgba(15, 22, 36, 0.4);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            gap: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .sidebar-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: white;
+        }
+
+        /* Drag & Drop Upload Zone */
+        .upload-zone {
+            border: 2px dashed rgba(139, 92, 246, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            background: rgba(139, 92, 246, 0.02);
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--primary);
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .upload-zone i {
+            font-size: 2rem;
+            color: var(--primary);
+        }
+
+        .upload-zone p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .upload-zone span {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Upload Status / Progress list */
+        .status-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .status-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+        }
+
+        .status-info {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Document List */
+        .doc-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .doc-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .doc-item:hover {
+            border-color: rgba(139, 92, 246, 0.4);
+            background: rgba(22, 31, 48, 0.9);
+        }
+
+        .doc-name {
+            font-size: 0.85rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .doc-name i {
+            color: var(--accent);
+        }
+
+        .doc-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .doc-delete-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .doc-delete-btn:hover {
+            color: var(--error);
+        }
+
+        .empty-docs {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border: 1px dashed var(--border-color);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .empty-docs i {
+            font-size: 1.5rem;
+            opacity: 0.5;
+        }
+
+        /* Main Panel - Chat Area */
+        .chat-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: transparent;
+            overflow: hidden;
+        }
+
+        .chat-history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .message-bubble {
+            display: flex;
+            gap: 1rem;
+            max-width: 80%;
+        }
+
+        .message-bubble.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-bubble.assistant {
+            align-self: flex-start;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            border: 1px solid var(--border-color);
+        }
+
+        .user .avatar {
+            background: var(--primary);
+            color: white;
+        }
+
+        .assistant .avatar {
+            background: #1e293b;
+            color: var(--accent);
+        }
+
+        .message-content {
+            padding: 1rem;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .user .message-content {
+            background: var(--primary-glow);
+            color: var(--text-main);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-top-right-radius: 4px;
+        }
+
+        .assistant .message-content {
+            background: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-top-left-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .message-content pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.75rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-top: 0.5rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Testcase Render Area */
+        .tc-table-container {
+            margin-top: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            max-width: 100%;
+        }
+
+        .tc-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        .tc-table th {
+            background: rgba(30, 41, 59, 0.8);
+            color: white;
+            padding: 0.75rem;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tc-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+            color: #d1d5db;
+        }
+
+        .tc-table tr:hover {
+            background: rgba(255,255,255,0.02);
+        }
+
+        .tc-id-badge {
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--accent);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: 600;
+        }
+
+        /* Quick actions chips */
+        .quick-actions {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.5rem 2rem;
+            background: rgba(11, 15, 25, 0.4);
+            border-top: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        .action-chip {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 0.4rem 0.8rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .action-chip:hover {
+            background: rgba(139, 92, 246, 0.1);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Input Panel */
+        .input-panel {
+            padding: 1.5rem 2rem;
+            background: rgba(11, 15, 25, 0.8);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .input-wrapper {
+            position: relative;
+            flex: 1;
+        }
+
+        .chat-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.9rem 1.2rem;
+            color: white;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.1);
+        }
+
+        .send-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            width: 48px;
+            height: 48px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .send-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Settings Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal-card {
+            background: #111827;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            width: 400px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .close-modal-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .close-modal-btn:hover {
+            color: white;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .form-group input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.6rem 0.8rem;
+            color: white;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary);
+        }
+
+        .save-modal-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.7rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .save-modal-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .excel-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-top: 0.75rem;
+            text-decoration: none;
+        }
+
+        .excel-link:hover {
+            background: rgba(16, 185, 129, 0.25);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="logo">
+            <i class="fa-solid fa-brain"></i>
+            <div>
+                <h1>Testcase Generator V2</h1>
+            </div>
+        </div>
+        <div class="header-actions">
+            <div class="state-badge">
+                <div class="state-dot active" id="stateDot"></div>
+                <span id="stateName">COLLECTING_REQ</span>
+            </div>
+            <button class="settings-btn" id="settingsOpenBtn">
+                <i class="fa-solid fa-gear"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- App Layout -->
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-title">
+                <i class="fa-solid fa-folder-open"></i> Quản Lý Tài Liệu Spec
+            </div>
+
+            <!-- Upload Zone -->
+            <div class="upload-zone" id="uploadZone">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <div>
+                    <p>Nhấp hoặc Kéo Thả File</p>
+                    <span>PDF, DOCX, DOC, TXT, MD</span>
+                </div>
+                <input type="file" id="fileInput">
+            </div>
+
+            <!-- Uploading/Processing Status -->
+            <div class="status-container" id="statusContainer"></div>
+
+            <!-- Document List -->
+            <div class="sidebar-title" style="margin-top: 1rem;">
+                <i class="fa-solid fa-file-invoice"></i> Danh Sách Tài Liệu
+            </div>
+            <div class="doc-list" id="docList">
+                <!-- Stored dynamically -->
+            </div>
+        </div>
+
+        <!-- Main Chat Panel -->
+        <div class="chat-panel">
+            <div class="chat-history" id="chatHistory">
+                <!-- Welcome Message -->
+                <div class="message-bubble assistant">
+                    <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                    <div class="message-content">
+                        Xin chào! Tôi là AI Assistant sinh Testcase. <br><br>
+                        <strong>Các bước bắt đầu:</strong><br>
+                        1. Tải lên tài liệu Spec kỹ thuật bên cột trái.<br>
+                        2. Nhập câu hỏi/yêu cầu tìm kiếm và phân tích để sinh Testcase.<br>
+                        3. Sau khi tôi đã sinh bản thảo Testcase, gõ <strong>"chốt"</strong> hoặc <strong>"đồng ý"</strong> để tôi tiến hành xuất ra file Excel cho bạn.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions Chips -->
+            <div class="quick-actions">
+                <button class="action-chip" onclick="quickSend('Sinh testcase cho Spec hiện tại')">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Sinh Testcase
+                </button>
+                <button class="action-chip" onclick="quickSend('Đồng ý xuất file Excel')">
+                    <i class="fa-solid fa-file-excel"></i> Xác Nhận & Xuất Excel
+                </button>
+                <button class="action-chip" onclick="quickSend('Kiểm tra trạng thái hệ thống')">
+                    <i class="fa-solid fa-circle-info"></i> Kiểm Tra Trạng Thái
+                </button>
+            </div>
+
+            <!-- Input Panel -->
+            <div class="input-panel">
+                <div class="input-wrapper">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Nhập câu hỏi hoặc yêu cầu làm rõ tại đây..." autocomplete="off">
+                </div>
+                <button class="send-btn" id="sendBtn">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Cấu Hình API Endpoint</h3>
+                <button class="close-modal-btn" id="settingsCloseBtn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="form-group">
+                <label for="apiUrlInput">Backend API URL</label>
+                <input type="text" id="apiUrlInput" value="http://localhost:8000">
+            </div>
+            <button class="save-modal-btn" id="settingsSaveBtn">Lưu Thay Đổi</button>
+        </div>
+    </div>
+
+    <!-- Script Logic -->
+    <script>
+        // State Management
+        let chatHistoryData = [];
+        let uploadedDocs = JSON.parse(localStorage.getItem('uploaded_docs') || '[]');
+
+        // Configuration
+        let API_BASE_URL = localStorage.getItem('api_base_url') || 'http://localhost:8000';
+        document.getElementById('apiUrlInput').value = API_BASE_URL;
+
+        // DOM Elements
+        const chatHistory = document.getElementById('chatHistory');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const docList = document.getElementById('docList');
+        const statusContainer = document.getElementById('statusContainer');
+        const stateDot = document.getElementById('stateDot');
+        const stateName = document.getElementById('stateName');
+        const settingsModal = document.getElementById('settingsModal');
+        const settingsOpenBtn = document.getElementById('settingsOpenBtn');
+        const settingsCloseBtn = document.getElementById('settingsCloseBtn');
+        const settingsSaveBtn = document.getElementById('settingsSaveBtn');
+        const apiUrlInput = document.getElementById('apiUrlInput');
+
+        // Init
+        renderDocs();
+
+        // Settings Modal events
+        settingsOpenBtn.addEventListener('click', () => { settingsModal.style.display = 'flex'; });
+        settingsCloseBtn.addEventListener('click', () => { settingsModal.style.display = 'none'; });
+        settingsSaveBtn.addEventListener('click', () => {
+            API_BASE_URL = apiUrlInput.value.trim();
+            localStorage.setItem('api_base_url', API_BASE_URL);
+            settingsModal.style.display = 'none';
+            addSystemMessage("Cập nhật Backend API URL thành: " + API_BASE_URL);
+        });
+
+        // Trigger file input dialog
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        // File drop handler
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.style.borderColor = 'var(--primary)';
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.style.borderColor = 'rgba(139, 92, 246, 0.3)';
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.style.borderColor = 'rgba(139, 92, 246, 0.3)';
+            if (e.dataTransfer.files.length > 0) {
+                handleFileUpload(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                handleFileUpload(fileInput.files[0]);
+            }
+        });
+
+        // Upload Logic
+        async function handleFileUpload(file) {
+            const statusId = 'upload_' + Date.now();
+            const statusHtml = `
+                <div class="status-item" id="${statusId}">
+                    <div class="status-header">
+                        <span>${file.name}</span>
+                        <i class="fa-solid fa-spinner spinner" style="color: var(--accent);"></i>
+                    </div>
+                    <div class="status-info">
+                        Đang tải lên và sinh Spec...
+                    </div>
+                </div>
+            `;
+            statusContainer.insertAdjacentHTML('beforeend', statusHtml);
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/v1/document/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                const statusItem = document.getElementById(statusId);
+
+                if (response.ok && result.success) {
+                    statusItem.style.borderColor = 'var(--success)';
+                    statusItem.querySelector('.status-info').innerHTML = `<span style="color: var(--success);"><i class="fa-solid fa-check"></i> Hoàn thành.</span>`;
+                    statusItem.querySelector('i').className = 'fa-solid fa-circle-check';
+                    statusItem.querySelector('i').style.color = 'var(--success)';
+
+                    // Save to docs list
+                    if (!uploadedDocs.includes(file.name)) {
+                        uploadedDocs.push(file.name);
+                        localStorage.setItem('uploaded_docs', JSON.stringify(uploadedDocs));
+                        renderDocs();
+                    }
+
+                    addAssistantMessage(`Đã sinh Spec thành công cho tài liệu **${file.name}** và nạp vào Vector Database! Bạn có thể bắt đầu chat để sinh testcase.`);
+                } else {
+                    throw new Error(result.detail || 'Lỗi không xác định.');
+                }
+            } catch (err) {
+                const statusItem = document.getElementById(statusId);
+                statusItem.style.borderColor = 'var(--error)';
+                statusItem.querySelector('.status-info').innerHTML = `<span style="color: var(--error);"><i class="fa-solid fa-circle-exclamation"></i> Lỗi: ${err.message}</span>`;
+                statusItem.querySelector('i').className = 'fa-solid fa-circle-xmark';
+                statusItem.querySelector('i').style.color = 'var(--error)';
+            }
+
+            // Fade status after 4 seconds
+            setTimeout(() => {
+                const item = document.getElementById(statusId);
+                if (item) item.remove();
+            }, 5000);
+        }
+
+        // Render Docs in Sidebar
+        function renderDocs() {
+            if (uploadedDocs.length === 0) {
+                docList.innerHTML = `
+                    <div class="empty-docs">
+                        <i class="fa-solid fa-file-circle-question"></i>
+                        Chưa có tài liệu nào được tải lên
+                    </div>
+                `;
+                return;
+            }
+
+            docList.innerHTML = uploadedDocs.map(name => `
+                <div class="doc-item">
+                    <span class="doc-name" title="${name}">
+                        <i class="fa-solid fa-file-lines"></i> ${name}
+                    </span>
+                    <div class="doc-actions">
+                        <button class="doc-delete-btn" onclick="deleteDoc('${name}')" title="Xóa tài liệu">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Delete Document from API and Local
+        async function deleteDoc(filename) {
+            if (!confirm(`Bạn có chắc chắn muốn xóa tài liệu "${filename}" khỏi database?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/v1/document/${encodeURIComponent(filename)}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    uploadedDocs = uploadedDocs.filter(d => d !== filename);
+                    localStorage.setItem('uploaded_docs', JSON.stringify(uploadedDocs));
+                    renderDocs();
+                    addSystemMessage(`Đã xóa tài liệu: ${filename}`);
+                } else {
+                    alert('Lỗi khi xóa: ' + (result.detail || 'Không xác định'));
+                }
+            } catch (err) {
+                alert('Lỗi kết nối khi xóa: ' + err.message);
+            }
+        }
+
+        // Chat Input events
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && chatInput.value.trim() !== '') {
+                sendMessage();
+            }
+        });
+
+        sendBtn.addEventListener('click', () => {
+            if (chatInput.value.trim() !== '') {
+                sendMessage();
+            }
+        });
+
+        // Quick send chips handler
+        function quickSend(text) {
+            chatInput.value = text;
+            sendMessage();
+        }
+
+        // Send Message
+        async function sendMessage() {
+            const queryText = chatInput.value.trim();
+            if (!queryText) return;
+
+            // Clear input
+            chatInput.value = '';
+
+            // Render User Message
+            addUserMessage(queryText);
+
+            // Add typing placeholder for assistant
+            const typingBubbleId = 'typing_' + Date.now();
+            showTypingIndicator(typingBubbleId);
+
+            try {
+                // Call API
+                const response = await fetch(`${API_BASE_URL}/v1/chat/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query: queryText,
+                        history: chatHistoryData
+                    })
+                });
+
+                const result = await response.json();
+                
+                // Remove typing indicator
+                const typingBubble = document.getElementById(typingBubbleId);
+                if (typingBubble) typingBubble.remove();
+
+                if (response.ok) {
+                    // Update conversation State badge
+                    updateStateBadge(result.state);
+
+                    // Append assistant response to UI
+                    renderAssistantResponse(result);
+
+                    // Add to local history memory
+                    chatHistoryData.push({ role: 'user', content: queryText });
+                    chatHistoryData.push({ role: 'assistant', content: result.answer });
+                } else {
+                    throw new Error(result.detail || 'Lỗi server.');
+                }
+
+            } catch (err) {
+                // Remove typing indicator
+                const typingBubble = document.getElementById(typingBubbleId);
+                if (typingBubble) typingBubble.remove();
+
+                addErrorMessage(`Không thể kết nối tới server API: ${err.message}. Đảm bảo API server đang chạy và URL cấu hình trong Settings chính xác.`);
+            }
+        }
+
+        // State Badge Style Updater
+        function updateStateBadge(state) {
+            stateName.textContent = state;
+            stateDot.className = 'state-dot'; // Reset
+            
+            if (state === 'COLLECTING_REQ') {
+                stateDot.classList.add('active');
+            } else if (state === 'DRAFTING') {
+                stateDot.classList.add('drafting');
+            } else if (state === 'REFINING') {
+                stateDot.classList.add('drafting');
+            } else if (state === 'CONFIRMING' || state === 'EXECUTING') {
+                stateDot.classList.add('confirming');
+            }
+        }
+
+        // UI Helpers
+        function addUserMessage(text) {
+            const html = `
+                <div class="message-bubble user">
+                    <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                    <div class="message-content">${escapeHTML(text)}</div>
+                </div>
+            `;
+            chatHistory.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+        }
+
+        function showTypingIndicator(id) {
+            const html = `
+                <div class="message-bubble assistant" id="${id}">
+                    <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                    <div class="message-content">
+                        Đang suy luận và tạo câu trả lời <i class="fa-solid fa-ellipsis spinner" style="margin-left: 5px;"></i>
+                    </div>
+                </div>
+            `;
+            chatHistory.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+        }
+
+        function addAssistantMessage(text) {
+            const html = `
+                <div class="message-bubble assistant">
+                    <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                    <div class="message-content">${markdownToHtml(text)}</div>
+                </div>
+            `;
+            chatHistory.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+        }
+
+        function addSystemMessage(text) {
+            const html = `
+                <div style="text-align: center; color: var(--text-muted); font-size: 0.75rem; padding: 0.5rem; border-top: 1px solid rgba(255,255,255,0.02); margin: 0.5rem 0;">
+                    <i class="fa-solid fa-info-circle"></i> ${text}
+                </div>
+            `;
+            chatHistory.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+        }
+
+        function addErrorMessage(text) {
+            const html = `
+                <div class="message-bubble assistant">
+                    <div class="avatar" style="background: rgba(239, 68, 110, 0.1); color: var(--error);"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="message-content" style="border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); color: #fca5a5;">
+                        ${text}
+                    </div>
+                </div>
+            `;
+            chatHistory.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+        }
+
+        // Render response data including structured testcases and Excel file download
+        function renderAssistantResponse(result) {
+            let htmlContent = markdownToHtml(result.answer);
+
+            // Check if there are generated test cases
+            if (result.test_cases && result.test_cases.length > 0) {
+                htmlContent += `
+                    <div class="tc-table-container">
+                        <table class="tc-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tiêu Đề</th>
+                                    <th>Pre-condition</th>
+                                    <th>Các Bước Thực Hiện</th>
+                                    <th>Expected Result</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${result.test_cases.map(tc => `
+                                    <tr>
+                                        <td><span class="tc-id-badge">${escapeHTML(tc.tc_id || '')}</span></td>
+                                        <td><strong>${escapeHTML(tc.tc_title || '')}</strong></td>
+                                        <td>${escapeHTML(tc.pre_condition || '-')}</td>
+                                        <td>${escapeHTML(tc.test_step || '-').replace(/\n/g, '<br>')}</td>
+                                        <td>${escapeHTML(tc.expected_result || '-')}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            // Check if excel file was output
+            if (result.excel_file) {
+                const downloadUrl = `${API_BASE_URL}/v1/document/download/${encodeURIComponent(result.excel_file)}`;
+                htmlContent += `
+                    <div>
+                        <a class="excel-link" href="${downloadUrl}" target="_blank">
+                            <i class="fa-solid fa-file-arrow-down"></i> Tải Excel: ${result.excel_file}
+                        </a>
+                    </div>
+                `;
+            }
+
+            const html = `
+                <div class="message-bubble assistant">
+                    <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                    <div class="message-content">${htmlContent}</div>
+                </div>
+            `;
+            chatHistory.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        // Utilities
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        function markdownToHtml(text) {
+            // Escape HTML first
+            let escaped = escapeHTML(text);
+
+            // Bold
+            escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+            // Inline Code
+            escaped = escaped.replace(/`(.*?)`/g, '<code style="background: rgba(0,0,0,0.2); padding: 0.1rem 0.3rem; border-radius: 4px; font-family: monospace;">$1</code>');
+
+            // Multi-line code block
+            escaped = escaped.replace(/```(.*?)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+
+            // Newlines
+            escaped = escaped.replace(/\n/g, '<br>');
+
+            return escaped;
+        }
+    </script>
+</body>
+</html>

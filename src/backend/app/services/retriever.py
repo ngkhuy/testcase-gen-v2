@@ -1,6 +1,3 @@
-from langchain_classic.retrievers import EnsembleRetriever, ContextualCompressionRetriever
-from langchain_classic.retrievers.multi_query import MultiQueryRetriever
-from langchain_community.retrievers import BM25Retriever
 from langchain_classic.retrievers.document_compressors import FlashrankRerank
 import logging
 from ..core.config import settings
@@ -12,9 +9,9 @@ class AdvancedRetriever:
     def __init__(self, vector_service, sqlite_service, llm_service):
         self.vector_service = vector_service
         self.sqlite_service = sqlite_service
-        self.llm = llm_service.llm
+        self.llm = getattr(llm_service, "llm", llm_service)
         
-        # init Ranker
+        # Khởi tạo Ranker
         logger.info("Khởi tạo Flashrank Ranker")
         self.flashrank_client = Ranker(
             model_name=settings.RERANK_MODEL,
@@ -26,7 +23,7 @@ class AdvancedRetriever:
         self.compressor = FlashrankRerank(client=self.flashrank_client, top_n=5)
         
     async def _get_expanded_queries(self, query: str) -> list[str]:
-        """Sử dụng LLM để mở rộng câu hỏi"""
+        """Sử dụng LLM để mở rộng câu hỏi (MultiQuery)"""
         try:
             from langchain_core.prompts import PromptTemplate
             prompt = PromptTemplate.from_template(
@@ -53,7 +50,6 @@ class AdvancedRetriever:
 
         for q in queries:
             vector_results = self.vector_service.search(q, top_k=search_k)
-            
             keyword_results = self.sqlite_service.search(q, top_k=search_k)
             
             for doc in vector_results + keyword_results:

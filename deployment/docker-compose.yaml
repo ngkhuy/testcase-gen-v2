@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ../
+      dockerfile: deployment/docker/backend.Dockerfile
+    container_name: testcase_gen_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_HOST=http://ollama:11434
+    volumes:
+      - ../storage:/app/storage
+      - ../models:/app/models
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - ollama
+    restart: always
+
+  # Dịch vụ Frontend (Sẽ tự động build index.html placeholder cho đến khi có code React/Vue thực tế)
+  frontend:
+    build:
+      context: ../
+      dockerfile: deployment/docker/frontend.Dockerfile
+    container_name: testcase_gen_frontend
+    ports:
+      - "80:80"
+    restart: always
+
+  # Dịch vụ Ollama (Tự động chạy và tăng tốc bằng GPU NVIDIA)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: testcase_gen_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ../storage/ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: always

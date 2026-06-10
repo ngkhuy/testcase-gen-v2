@@ -4,22 +4,19 @@ import logging
 from uuid import uuid4
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
-from .embedding_service import EmbeddingService
-
-from ..core.config import settings
+from ..embedding_service import EmbeddingService
+from ...core.config import settings
 
 logger = logging.getLogger(__name__)
 
-class VectorService:
+class VectorDatabaseService:
     def __init__(self, embedding_service: EmbeddingService):
         self.embed_model = embedding_service.get_model()
         self.index_path = settings.FAISS_INDEX_PATH
         self.vector_db = self.load_vector_db()
         
     def create_vector_db(self, documents: list[Document]):
-        """
-        Tạo mới vector database 
-        """
+        """Tạo mới vector database"""
         try:
             logger.info(f"Tạo vector database mới với {len(documents)} tài liệu")
             
@@ -32,16 +29,13 @@ class VectorService:
             
             # lưu vào persist storage
             self.save_vector_db()
-            
             return self.vector_db
         except Exception as e:
-            logger.error(f"Lỗi khi tao vector database: {e}")
+            logger.error(f"Lỗi khi tạo vector database: {e}")
             return None
         
     def add_documents(self, documents: list[Document]):
-        """
-        Thêm tài liệu vào vector database hiện tại
-        """
+        """Thêm tài liệu vào vector database hiện tại"""
         try:
             if self.vector_db is None:
                 return self.create_vector_db(documents=documents)
@@ -84,10 +78,7 @@ class VectorService:
             return None
         
     def delete_by_source(self, source: str):
-        """
-        Xóa tài liệu khỏi vector database dựa trên nguồn
-        Sử dụng khi file bị trùng tên
-        """
+        """Xóa tài liệu khỏi vector database dựa trên nguồn"""
         if not self.vector_db:
             logger.warning("Không có vector database để xóa tài liệu")
             return False
@@ -136,9 +127,7 @@ class VectorService:
             return []
         
     def chunk_document(self, document: Document, chunk_size: int = 1000, chunk_overlap: int = 200):
-        """
-        Chia nhỏ một tài liệu thành các đoạn
-        """
+        """Chia nhỏ một tài liệu thành các đoạn"""
         try:
             text = document.page_content
             metadata = document.metadata
@@ -154,7 +143,6 @@ class VectorService:
                 chunk_metadata["source"] = metadata.get("source", "unknown") if metadata else "unknown"
                 
                 chunks.append(Document(page_content=chunk_text, metadata=chunk_metadata))
-                
                 start += chunk_size - chunk_overlap
             
             logger.info(f"Đã chia tài liệu thành {len(chunks)} đoạn với kích thước {chunk_size} và overlap {chunk_overlap}")
@@ -162,3 +150,6 @@ class VectorService:
         except Exception as e:
             logger.error(f"Lỗi khi chia nhỏ tài liệu: {e}")
             return []
+
+# Alias để duy trì khả năng tương thích ngược
+VectorService = VectorDatabaseService

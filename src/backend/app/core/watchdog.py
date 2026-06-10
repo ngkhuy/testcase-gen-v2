@@ -2,23 +2,16 @@ import time
 import os
 import logging
 import asyncio
-
-from langchain_core.documents import Document
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from ..services.vector_service import VectorService
-from ..services.spec_generation_service import SpecGeneratorService
 from .config import settings
-from ..utils.clean_table_tag import transform_tables
+from ..services.document_pipeline import DocumentProcessingPipeline
 
 logger = logging.getLogger(__name__)
 
 class DocHandler(FileSystemEventHandler):
-    def __init__(self, vector_service: VectorService, sqlite_service, spec_service: SpecGeneratorService, extraction_service, loop: asyncio.AbstractEventLoop):
-        self.vector_service = vector_service
-        self.sqlite_service = sqlite_service
-        self.spec_service = spec_service
-        self.extraction_service = extraction_service
+    def __init__(self, pipeline: DocumentProcessingPipeline, loop: asyncio.AbstractEventLoop):
+        self.pipeline = pipeline
         self.loop = loop
         self._last_event_times = {} 
         self._processing_files = set() 
@@ -31,20 +24,20 @@ class DocHandler(FileSystemEventHandler):
             return True
             
         last_time = self._last_event_times.get(path, 0)
-        if current_time - last_time < 10:  # Tăng cooldown lên 10 giây để tránh loop OS
+        if current_time - last_time < 10:  # Cooldown 10 giây
             return True
         
         return False
 
     def on_created(self, event):
-        if not event.is_directory and event.src_path.endswith((".pdf", ".md", ".txt")):
+        if not event.is_directory and event.src_path.endswith((".pdf", ".md", ".txt", ".docx")):
             if self._is_duplicate_event(event.src_path):
                 return
             logger.info(f"Phát hiện tài liệu mới: {event.src_path}")
             self._run_safe_workflow(event.src_path)
 
     def on_modified(self, event):
-        if not event.is_directory and event.src_path.endswith((".pdf", ".md", ".txt")):
+        if not event.is_directory and event.src_path.endswith((".pdf", ".md", ".txt", ".docx")):
             if self._is_duplicate_event(event.src_path):
                 return
             logger.info(f"Tài liệu thay đổi: {event.src_path}")
@@ -63,53 +56,27 @@ class DocHandler(FileSystemEventHandler):
         if not event.is_directory:
             file_name = os.path.basename(event.src_path)
             logger.info(f"Đang xóa dữ liệu của {file_name} khỏi Vector DB & SQLite FTS...")
-            self.vector_service.delete_by_source(file_name)
-            self.sqlite_service.delete_by_source(file_name)
+            self.pipeline.vector_db.delete_by_source(file_name)
+            self.pipeline.sqlite_db.delete_by_source(file_name)
 
     def _process_workflow(self, file_path):
-        """Dây chuyền xử lý tự động sử dụng thread-safe async"""
+        """Kích hoạt pipeline xử lý bằng thread-safe async"""
         try:
-            file_name = os.path.basename(file_path)
-            logger.info(f"Đang trích xuất nội dung từ {file_name}...")
-            
-            # Sử dụng run_coroutine_threadsafe để chạy trên Event Loop chính
-            # Tránh lỗi 'Event loop is closed'
             def run_async(coro):
                 future = asyncio.run_coroutine_threadsafe(coro, self.loop)
                 return future.result()
 
-            raw = run_async(self.extraction_service.parse_document(document_path=file_path))
-            raw_markdown = raw.markdown
-            
-            raw_response = run_async(self.extraction_service.extract_content(markdown=raw_markdown))
-            raw_content = raw_response.content if hasattr(raw_response, 'content') else str(raw_response)
-            
-            content = transform_tables(raw_content) 
-            
-            logger.info(f"LLM đang soạn thảo Technical Spec...")
-            # spec_service.generate_detailed_spec không async nên gọi trực tiếp
-            spec_path, spec_content = self.spec_service.generate_detailed_spec(content, file_name)
-            
-            logger.info(f"Đang nạp Spec vào Vector Database...")
-            chunks = self.vector_service.chunk_document(Document(page_content=spec_content, metadata={"source": file_name}))
-            
-            self.vector_service.delete_by_source(file_name)
-            self.sqlite_service.delete_by_source(file_name)
-            
-            self.vector_service.add_documents(chunks)
-            self.sqlite_service.add_documents(chunks)
-            
-            logger.info(f"Hoàn tất! Hệ thống đã sẵn sàng truy vấn cho: {file_name}")
+            # Gọi pipeline xử lý tập trung
+            run_async(self.pipeline.process_document(file_path))
             
         except Exception as e:
-            logger.error(f"Lỗi dây chuyền xử lý: {str(e)}")
+            logger.error(f"Lỗi dây chuyền xử lý Watchdog: {str(e)}")
 
 class DocWatchdog:
-    def __init__(self, vector_service, sqlite_service, spec_service, extraction_service, loop=None):
+    def __init__(self, pipeline: DocumentProcessingPipeline, loop=None):
         self.observer = Observer()
-        # Lấy loop hiện tại nếu không truyền vào
         current_loop = loop or asyncio.get_event_loop()
-        self.handler = DocHandler(vector_service, sqlite_service, spec_service, extraction_service, current_loop)
+        self.handler = DocHandler(pipeline, current_loop)
         self.watch_dir = settings.RAW_DOC_DIR
 
     def start(self):
