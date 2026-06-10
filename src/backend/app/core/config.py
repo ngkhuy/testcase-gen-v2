@@ -2,13 +2,15 @@ import os
 from pydantic_settings import BaseSettings
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent.resolve()
+# PROJECT_ROOT sẽ trỏ về d:/testcase-gen-v2
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.resolve()
 
 class Settings(BaseSettings):
-    LANDING_AI_API_KEY: str
+    OPENAI_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
     OLLAMA_BASE_URL: str = "http://localhost:11434/v1"
-    OLLAMA_MODEL: str = "qwen2.5:7b"
-    OLLAMA_EMBEDDING_MODEL: str = "qwen2.5:latest" 
+    OLLAMA_MODEL: str = "qwen3.5:4b"
+    OLLAMA_EMBEDDING_MODEL: str = "qwen3-embedding:0.6b" 
     
     # Paths relative to project root
     FAISS_INDEX_PATH: str = str(PROJECT_ROOT / "storage" / "faiss_index")
@@ -19,8 +21,10 @@ class Settings(BaseSettings):
     SQLITE_DB_PATH: str = str(PROJECT_ROOT / "storage" / "sqlite_fts.db")
     
     RERANK_MODEL: str = "rank-T5-flan"
+    ENABLE_WATCHDOG: bool = False
 
     class Config:
-        env_file = ".env"
+        env_file = str(PROJECT_ROOT / ".env")
+        env_file_encoding = "utf-8"
     
 settings = Settings()
