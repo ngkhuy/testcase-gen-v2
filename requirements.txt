@@ -1,5 +1,4 @@
 dotenv==0.9.9
-landingai-ade==1.6.0
 beautifulsoup4==4.14.3
 pydantic-settings==2.13.1
 langchain-ollama==1.0.1
@@ -9,3 +8,9 @@ faiss-cpu==1.13.2
 watchdog==6.0.0
 FlashRank==0.2.10
 openpyxl==3.1.5
+pdfplumber
+python-docx
+fastapi
+uvicorn
+ragas
+python-multipart

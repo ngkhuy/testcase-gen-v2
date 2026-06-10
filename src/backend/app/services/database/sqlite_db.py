@@ -1,14 +1,14 @@
 import sqlite3
 import os
 import logging
-from typing import List, Dict
+import json
+from typing import List
 from langchain_core.documents import Document
-
-from ..core.config import settings
+from ...core.config import settings
 
 logger = logging.getLogger(__name__)
 
-class SQLiteService:
+class SQLiteDatabaseService:
     def __init__(self):
         self.db_path = settings.SQLITE_DB_PATH
         self._init_db()
@@ -36,13 +36,10 @@ class SQLiteService:
             logger.info("SQLite FTS5 đã sẵn sàng.")
 
     def add_documents(self, documents: List[Document]):
-        """
-        Thêm tài liệu vào bộ lọc từ khóa (Incremental Add)
-        """
+        """Thêm tài liệu vào bộ lọc từ khóa (Incremental Add)"""
         try:
             with self._get_connection() as conn:
                 for doc in documents:
-                    import json
                     conn.execute(
                         "INSERT INTO documents_fts (content, source, metadata_json) VALUES (?, ?, ?)",
                         (doc.page_content, doc.metadata.get("source", ""), json.dumps(doc.metadata))
@@ -55,11 +52,8 @@ class SQLiteService:
             return False
 
     def search(self, query: str, top_k: int = 5) -> List[Document]:
-        """
-        Tìm kiếm bằng thuật ngữ BM25 tích hợp sẵn trong SQLite FTS5
-        """
+        """Tìm kiếm bằng thuật ngữ BM25 tích hợp sẵn trong SQLite FTS5"""
         try:
-            import json
             # Làm sạch query cho FTS5:
             # Bọc trong dấu ngoặc kép để thực hiện phrase search an toàn, tránh lỗi syntax khi có dấu câu
             clean_query = query.replace('"', '""')
@@ -113,3 +107,6 @@ class SQLiteService:
         except Exception as e:
             logger.error(f"Lỗi khi reset SQLite: {e}")
             return False
+
+# Alias để duy trì khả năng tương thích ngược
+SQLiteService = SQLiteDatabaseService
