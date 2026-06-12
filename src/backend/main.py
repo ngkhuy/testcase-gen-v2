@@ -1,11 +1,11 @@
-import os
-import sys
-import logging
-import asyncio
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from openpyxl import Workbook
-from openpyxl.styles import Font
+import os          # Thư viện làm việc với hệ điều hành (tạo thư mục, đọc biến môi trường)
+import sys         # Thư viện làm việc với Python runtime (thêm đường dẫn vào sys.path)
+import logging     # Thư viện ghi log (như nhật ký hệ thống)
+import asyncio     # Thư viện cho lập trình bất đồng bộ (async/await)
+from fastapi import FastAPI                   # Framework tạo web API
+from fastapi.middleware.cors import CORSMiddleware  # Middleware cho phép frontend gọi API
+from openpyxl import Workbook                # Thư viện tạo file Excel
+from openpyxl.styles import Font             # Định dạng chữ trong Excel (bold, color...)
 
 # Thêm đường dẫn hiện tại vào sys.path để tránh lỗi import khi chạy từ thư mục gốc
 current_dir = os.path.dirname(os.path.abspath(__file__))
