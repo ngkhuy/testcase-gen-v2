@@ -307,6 +307,18 @@
             color: var(--error);
         }
 
+        .doc-pdf-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .doc-pdf-btn:hover {
+            color: #f87171;
+        }
+
         .empty-docs {
             text-align: center;
             padding: 2rem 1rem;
@@ -653,6 +665,28 @@
         .excel-link:hover {
             background: rgba(16, 185, 129, 0.25);
         }
+
+        .pdf-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--primary);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-top: 0.75rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pdf-link:hover {
+            background: rgba(139, 92, 246, 0.25);
+            border-color: var(--primary);
+        }
     </style>
 </head>
 <body>
@@ -792,6 +826,7 @@
 
         // Init
         renderDocs();
+        loadDocsFromAPI();
 
         // Settings Modal events
         settingsOpenBtn.addEventListener('click', () => { settingsModal.style.display = 'flex'; });
@@ -871,7 +906,7 @@
                         renderDocs();
                     }
 
-                    addAssistantMessage(`Đã sinh Spec thành công cho tài liệu **${file.name}** và nạp vào Vector Database! Bạn có thể bắt đầu chat để sinh testcase.`);
+                    addAssistantMessageWithPDF(`Đã sinh Spec thành công cho tài liệu **${file.name}** và nạp vào Vector Database! Bạn có thể tải bản PDF Spec của tài liệu này bằng nút dưới đây hoặc bắt đầu chat để sinh testcase.`, file.name);
                 } else {
                     throw new Error(result.detail || 'Lỗi không xác định.');
                 }
@@ -908,12 +943,32 @@
                         <i class="fa-solid fa-file-lines"></i> ${name}
                     </span>
                     <div class="doc-actions">
+                        <button class="doc-pdf-btn" onclick="generatePDF('${name}')" title="Xuất PDF Spec">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </button>
                         <button class="doc-delete-btn" onclick="deleteDoc('${name}')" title="Xóa tài liệu">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
                     </div>
                 </div>
             `).join('');
+        }
+
+        // Load documents from Backend API
+        async function loadDocsFromAPI() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/v1/document`);
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && Array.isArray(result.documents)) {
+                        uploadedDocs = result.documents;
+                        localStorage.setItem('uploaded_docs', JSON.stringify(uploadedDocs));
+                        renderDocs();
+                    }
+                }
+            } catch (err) {
+                console.error("Lỗi khi đồng bộ danh sách tài liệu từ backend:", err);
+            }
         }
 
         // Delete Document from API and Local
@@ -937,6 +992,67 @@
             } catch (err) {
                 alert('Lỗi kết nối khi xóa: ' + err.message);
             }
+        }
+
+        // Generate PDF Spec
+        async function generatePDF(filename) {
+            const statusId = 'pdf_' + Date.now();
+            const statusHtml = `
+                <div class="status-item" id="${statusId}">
+                    <div class="status-header">
+                        <span>Tạo PDF: ${filename}</span>
+                        <i class="fa-solid fa-spinner spinner" style="color: var(--accent);"></i>
+                    </div>
+                    <div class="status-info">
+                        Đang chuyển đổi Spec sang PDF...
+                    </div>
+                </div>
+            `;
+            statusContainer.insertAdjacentHTML('beforeend', statusHtml);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/v1/document/spec-pdf/${encodeURIComponent(filename)}`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    
+                    // Tạo tên file download
+                    const cleanName = filename.replace(/\.[^/.]+$/, "");
+                    a.download = `spec_${cleanName}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+
+                    const statusItem = document.getElementById(statusId);
+                    if (statusItem) {
+                        statusItem.style.borderColor = 'var(--success)';
+                        statusItem.querySelector('.status-info').innerHTML = `<span style="color: var(--success);"><i class="fa-solid fa-check"></i> Đã tải về PDF.</span>`;
+                        statusItem.querySelector('i').className = 'fa-solid fa-circle-check';
+                        statusItem.querySelector('i').style.color = 'var(--success)';
+                    }
+                } else {
+                    const errResult = await response.json();
+                    throw new Error(errResult.detail || 'Lỗi không xác định.');
+                }
+            } catch (err) {
+                const statusItem = document.getElementById(statusId);
+                if (statusItem) {
+                    statusItem.style.borderColor = 'var(--error)';
+                    statusItem.querySelector('.status-info').innerHTML = `<span style="color: var(--error);"><i class="fa-solid fa-circle-exclamation"></i> Lỗi: ${err.message}</span>`;
+                    statusItem.querySelector('i').className = 'fa-solid fa-circle-xmark';
+                    statusItem.querySelector('i').style.color = 'var(--error)';
+                }
+            }
+
+            // Xóa thông báo sau 5 giây
+            setTimeout(() => {
+                const item = document.getElementById(statusId);
+                if (item) item.remove();
+            }, 5000);
         }
 
         // Chat Input events
@@ -1001,7 +1117,11 @@
 
                     // Add to local history memory
                     chatHistoryData.push({ role: 'user', content: queryText });
-                    chatHistoryData.push({ role: 'assistant', content: result.answer });
+                    let assistantContent = result.answer;
+                    if (result.test_cases && result.test_cases.length > 0) {
+                        assistantContent += "\n\n```json\n" + JSON.stringify({ test_cases: result.test_cases }, null, 2) + "\n```";
+                    }
+                    chatHistoryData.push({ role: 'assistant', content: assistantContent });
                 } else {
                     throw new Error(result.detail || 'Lỗi server.');
                 }
@@ -1061,6 +1181,30 @@
                 <div class="message-bubble assistant">
                     <div class="avatar"><i class="fa-solid fa-robot"></i></div>
                     <div class="message-content">${markdownToHtml(text)}</div>
+                </div>
+            `;
+            chatHistory.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+        }
+
+        function addAssistantMessageWithPDF(text, filename) {
+            const htmlContent = markdownToHtml(text);
+            const downloadUrl = `${API_BASE_URL}/v1/document/spec-pdf/${encodeURIComponent(filename)}`;
+            const cleanName = filename.replace(/\.[^/.]+$/, "");
+            const pdfButtonHtml = `
+                <div>
+                    <a class="pdf-link" href="${downloadUrl}" target="_blank" download="spec_${cleanName}.pdf">
+                        <i class="fa-solid fa-file-pdf"></i> Tải PDF Spec: spec_${cleanName}.pdf
+                    </a>
+                </div>
+            `;
+            const html = `
+                <div class="message-bubble assistant">
+                    <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                    <div class="message-content">
+                        ${htmlContent}
+                        ${pdfButtonHtml}
+                    </div>
                 </div>
             `;
             chatHistory.insertAdjacentHTML('beforeend', html);

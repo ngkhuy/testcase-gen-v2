@@ -122,10 +122,8 @@ async def chat_interaction(
         
         if isinstance(response, dict) and "test_cases" in response:
             test_cases_list = response["test_cases"]
-            # Chuẩn bị hiển thị thô dạng text hoặc định dạng đẹp cho người dùng
-            answer_text = f"Đã sinh thành công {len(test_cases_list)} test cases dựa trên Spec tìm thấy:\n\n```json\n"
-            answer_text += json.dumps(response, indent=2, ensure_ascii=False)
-            answer_text += "\n```"
+            # Chuẩn bị thông báo thân thiện cho người dùng
+            answer_text = f"Đã sinh thành công {len(test_cases_list)} test cases dựa trên tài liệu Spec tìm thấy. Bạn có đồng ý xuất file Excel không?"
             skill_manager.set_state(ConversationState.REFINING)
         elif isinstance(response, dict) and "error" in response:
             raise HTTPException(status_code=500, detail=response["error"])

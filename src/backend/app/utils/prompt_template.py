@@ -22,6 +22,10 @@ def create_rag_query_prompt() -> str:
     return """
     Sử dụng thông tin từ ngữ cảnh (Context) dưới đây để hỗ trợ người dùng. 
     
+    Yêu cầu quan trọng về số lượng test case:
+    - Hãy tạo chính xác số lượng test case mà người dùng yêu cầu trong câu hỏi. Ví dụ: nếu người dùng yêu cầu tạo 1 test case, bạn chỉ được tạo đúng 1 test case duy nhất. Nếu họ yêu cầu tạo 2, chỉ tạo đúng 2.
+    - Nếu người dùng không chỉ định rõ số lượng, hãy tự động tạo số lượng test case đầy đủ và phù hợp để bao phủ các kịch bản kiểm thử cần thiết.
+    
     BẮT BUỘC TRẢ VỀ JSON VỚI CÁC KEY SAU:
     - test_cases: mảng danh sách các test case. 
     Trong mỗi test case phải có đúng các key này:

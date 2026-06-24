@@ -19,6 +19,13 @@ install:
 build:
 	docker compose -f deployment/docker-compose.yaml build
 
+be-build:
+	docker compose -f deployment/docker-compose.yaml build backend
+
+fe-build:
+	docker compose -f deployment/docker-compose.yaml build frontend
+
+
 pull-models:
 	@docker exec -i testcase_gen_ollama ollama pull qwen3.5:4b || ollama pull qwen3.5:4b
 	@docker exec -i testcase_gen_ollama ollama pull qwen3-embedding:0.6b || ollama pull qwen3-embedding:0.6b
@@ -33,7 +40,7 @@ docker-up:
 	docker compose -f deployment/docker-compose.yaml up -d
 
 docker-down:
-	docker compose -f deployment/docker-compose.yaml down
+	docker compose -f deployment/docker-compose.yaml down 
 
 clean:
 	python -c "import shutil, pathlib; [shutil.rmtree(p) for p in pathlib.Path('.').rglob('__pycache__') if p.is_dir()]; [p.unlink() for p in pathlib.Path('.').rglob('*.pyc') if p.is_file()]"
